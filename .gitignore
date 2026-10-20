@@ -1,0 +1,9 @@
+node_modules/
+.next/
+.vercel/
+.env
+.env.*
+!.env.example
+coverage/
+tsconfig.tsbuildinfo
+data/affiliate-products.json
