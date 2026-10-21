@@ -12,8 +12,8 @@ export type FeaturedProduct = {
   availability?: string;
 };
 
-export function amazonSearchUrl(query: string, tag = "AMAZON_AFFILIATE_TAG") {
-  return `https://www.amazon.es/s?k=${encodeURIComponent(query).replace(/%20/g, "+")}&tag=${encodeURIComponent(tag || "AMAZON_AFFILIATE_TAG")}`;
+export function amazonSearchUrl(query: string, tag = "kevinpatane20-21") {
+  return `https://www.amazon.es/s?k=${encodeURIComponent(query).replace(/%20/g, "+")}&tag=${encodeURIComponent(tag || "kevinpatane20-21")}`;
 }
 
 const amazonSearch = (query: string) => amazonSearchUrl(query);
