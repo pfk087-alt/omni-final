@@ -4,6 +4,10 @@
     {
       "path": "/api/auto-store/import",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/verificar-facturacion",
+      "schedule": "0 9 * * *"
     }
   ]
 }

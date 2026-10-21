@@ -1,0 +1,11 @@
+2026-10-21 00:00 UTC — Inicio de implementación SEO y contenido social en OMNI-FINAL.
+2026-10-21 — Confirmadas mediante resultados públicos de páginas Amazon cuatro referencias ASIN: Dyson V15 B099NLCLZH, Cecotec Conga Rockstar B0BPYVZL2J, Philips Serie 2000 B0CYTL9FTD y Cecotec AirClima B0BQ1XGXTY. Las consultas de precio y rating que se ven en resultados son antiguas y se excluyen de la web.
+2026-10-21 — Las demás guías enlazan a búsquedas de Amazon.es con tag kevinpatane20-21; no se inventan ASIN ni precios.
+2026-10-21 — No hay acceso confirmado al token de Instagram Graph; se guardan borradores y artes SVG en public/social.
+2026-10-21 — El ping de sitemap de Google fue retirado; se crea sitemap.xml + robots.txt y endpoint privado /api/revalidate. Google recomienda robots.txt/Search Console. No se puede garantizar indexación durante la noche.
+2026-10-21 — No se ejecutan scraping con proxies para evadir bloqueos. Los snapshots de resultados públicos disponibles no acreditan tendencias de producto en vivo.
+2026-10-21 02:53 UTC — Build de producción correcto (`npm run build`): 10 rutas de producto prerenderizadas, /sitemap.xml y /robots.txt generados.
+2026-10-21 02:53 UTC — Validación local: 10 borradores sociales con enlace etiquetado y 15 láminas SVG (5 carruseles de 3 láminas).
+2026-10-21 02:53 UTC — Vercel CLI comprobado: sesión cerrada (Logged out); no es posible desplegar a producción desde este entorno ahora.
+2026-10-21 02:53 UTC — Commit local creado: 13fea45 feat: add product guides and social drafts.
+2026-10-21 02:53 UTC — `git push origin main` no pudo conectar con github.com:443. No se publica un nuevo deploy automáticamente mientras el push no se complete.

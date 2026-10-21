@@ -1,0 +1,11 @@
+2026-10-21 — Inicio: objetivo de ingresos reales. No se contarán clics como ventas ni se afirmarán comisiones sin registro confirmado.
+2026-10-21 — Carretera Amazon: tag fijo kevinpatane20-21; enlaces salientes se canonizan a Amazon.es y filtran códigos/parametros de redirección. Se añade auditoría Shopify del metafield amazon_url.
+2026-10-21 — Tracking web preparado con affiliate_click_events y panel /dashboard/facturacion. La base requiere ejecutar data/affiliate-metrics-schema.sql y variables Supabase privadas; sin esto los clics aparecen como desconocidos.
+2026-10-21 — Comisión no disponible por API de catálogo de Amazon. Solo affiliate_earnings con status confirmed y currency EUR cuenta como facturación; sin reportes conciliados el panel no se pondrá en verde.
+2026-10-21 — Vercel Hobby limita cron a una ejecución diaria por cron. Se mantiene verificador diario en Vercel y guardia GitHub Actions cada 30 minutos; requiere que estos archivos lleguen a main para activarse.
+2026-10-21 — Instagram: 5 carruseles/15 SVG y 10 borradores ya preparados; no hay token confirmado, así que no se publica contenido automáticamente.
+2026-10-21 — Planes eBay, AdSense y Stripe no activos: faltan afiliación/cuenta y APIs verificadas; no se generan ventas ficticias ni se cobra sin conectar procesador.
+2026-10-21 — Verificación final: `npm run build` correcto; rutas de tracking, panel, guías y cron compilan.
+2026-10-21 — Auditoría local: no queda ningún ID de afiliado anterior ni URL /s?k de Amazon.fr en archivos de aplicación; helper probado con parámetros de seguimiento codificados.
+2026-10-21 — Bloqueo de producción: no hay VERCEL_TOKEN/GITHUB_TOKEN ni credenciales guardadas en .env.local; Vercel CLI devuelve Logged out y git push falla por SEC_E_NO_CREDENTIALS. Auto-fix.yml quedó preparado, pero no puede ejecutarse en GitHub hasta que llegue al remoto.
+2026-10-21 — Integraciones de métricas y cobro ausentes en el entorno: SUPABASE_URL/service role, CRON_SECRET, Amazon Creators API, Stripe y eBay no están configurados. Por tanto clics, comisiones, pagos y venta real aún no pueden comprobarse ni iniciarse desde este entorno.

@@ -1,3 +1,5 @@
+import { cleanAmazonLink } from "@/lib/cleanAmazonLink";
+
 export type FeaturedProduct = {
   id: string;
   title: string;
@@ -12,8 +14,15 @@ export type FeaturedProduct = {
   availability?: string;
 };
 
-export function amazonSearchUrl(query: string, tag = "kevinpatane20-21") {
-  return `https://www.amazon.es/s?k=${encodeURIComponent(query).replace(/%20/g, "+")}&tag=${encodeURIComponent(tag || "kevinpatane20-21")}`;
+export function amazonSearchUrl(query: string, tag?: string) {
+  void tag;
+  return cleanAmazonLink(`https://www.amazon.es/s?k=${encodeURIComponent(query)}`);
+}
+
+export function amazonProductUrl(asin: string, tag?: string) {
+  if (!/^[A-Z0-9]{10}$/.test(asin)) throw new Error("ASIN no válido.");
+  void tag;
+  return cleanAmazonLink(`https://www.amazon.es/dp/${asin}`);
 }
 
 const amazonSearch = (query: string) => amazonSearchUrl(query);
@@ -44,3 +53,4 @@ export const FEATURED_PRODUCTS: FeaturedProduct[] = [
     affiliateUrl: amazonSearch("DeLonghi Magnifica S"),
   },
 ];
+

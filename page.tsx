@@ -1,61 +1,84 @@
-"use client";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { guideAmazonUrl, SEO_GUIDES } from "@/app/lib/seo-guides";
+import TrackedAmazonLink from "@/app/components/tracked-amazon-link";
 
-import { useEffect, useState } from "react";
-import styles from "./store.module.css";
+export const dynamicParams = false;
 
-type StoreStatus = { connected: boolean; enabled: boolean; importedToday: number; totalProducts: number; revenueToday: number | null; error?: string };
+export function generateStaticParams() {
+  return SEO_GUIDES.map(({ slug }) => ({ slug }));
+}
 
-export default function AutoStorePage() {
-  const [affiliateId, setAffiliateId] = useState("");
-  const [status, setStatus] = useState<StoreStatus>({ connected: false, enabled: false, importedToday: 0, totalProducts: 0, revenueToday: null });
-  const [loading, setLoading] = useState(false);
-  const [toggling, setToggling] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const guide = SEO_GUIDES.find((item) => item.slug === slug);
+  if (!guide) return {};
+  return {
+    title: `${guide.title} | Passerelle`,
+    description: guide.summary,
+    alternates: { canonical: `/productos/${guide.slug}` },
+    openGraph: { title: guide.title, description: guide.summary, type: "article", locale: "es_ES" },
+  };
+}
 
-  async function refresh() {
-    const response = await fetch("/api/auto-store/status", { cache: "no-store" });
-    const data = await response.json(); setStatus(data);
-  }
-  useEffect(() => { setAffiliateId(localStorage.getItem("omni-affiliate-id") || ""); void refresh(); }, []);
-  function saveId(value: string) { setAffiliateId(value); localStorage.setItem("omni-affiliate-id", value); }
+const disclosure = "Passerelle participa en el Programa de Afiliados de Amazon. Si compras desde nuestros enlaces, podemos recibir una comisión sin coste adicional para ti. El precio y la disponibilidad pueden cambiar; consulta siempre Amazon antes de comprar.";
 
-  async function importProducts() {
-    setLoading(true); setError(""); setMessage("");
-    try {
-      const response = await fetch("/api/auto-store/import", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ affiliateId }) });
-      const data = await response.json(); if (!response.ok) throw new Error(data.error || "Falló la importación.");
-      setMessage(`${data.imported} productos creados como borrador · ${data.skipped} ya existían · ${data.found} resultados válidos.`);
-      if (data.errors?.length) setError(data.errors.slice(0, 3).join(" · "));
-      await refresh();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Error de importación."); }
-    finally { setLoading(false); }
-  }
-
-  async function toggleAutopilot() {
-    setToggling(true); setError(""); setMessage("");
-    try {
-      const response = await fetch("/api/auto-store/autopilot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: !status.enabled }) });
-      const data = await response.json(); if (!response.ok) throw new Error(data.error || "No se pudo actualizar el modo.");
-      setStatus((value) => ({ ...value, enabled: data.enabled }));
-      setMessage(data.enabled ? "VENDER SOLO activado. La sincronización programada actualizará precios y disponibilidad cada hora." : "Modo autónomo desactivado.");
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Error al activar el modo autónomo."); }
-    finally { setToggling(false); }
-  }
-
-  return <main className={styles.shell}>
-    <header className={styles.topbar}><a className={styles.brand} href="/">◈ <span>OMNI <i>AUTONOMOUS COMPANY</i></span></a><div className={styles.topRight}><span className={`${styles.health} ${status.connected ? styles.good : ""}`}><b />{status.connected ? "SHOPIFY CONECTADO" : "CONFIGURACIÓN PENDIENTE"}</span><a className={styles.back} href="/">← Oficina</a></div></header>
-    <section className={styles.content}>
-      <div className={styles.head}><div><p className={styles.eyebrow}>COMMERCE AUTONOME <span>·</span> AMAZON FR</p><h1>Tu tienda,<br/><em>en piloto automático.</em></h1><p className={styles.sub}>Un catálogo afiliado en francés que se actualiza con disponibilidad y precios de Amazon.</p></div><div className={styles.pulse}><span>◈</span><i /></div></div>
-      <div className={styles.banner}><div><strong>{status.connected ? status.enabled ? "PILOTO AUTOMÁTICO ACTIVO" : "TIENDA EN MODO MANUAL" : "CONECTA TUS SERVICIOS"}</strong><p>{status.connected ? status.enabled ? "Sincronización programada cada hora. Productos visibles como borradores hasta que los publiques." : "Configura el catálogo para empezar a importar productos reales." : "La API de Amazon Creators y Shopify necesitan credenciales de servidor."}</p></div><span className={status.enabled ? styles.live : styles.off}>{status.enabled ? "● LIVE" : "○ OFFLINE"}</span></div>
-      <div className={styles.metrics}><article><span>COMISIONES HOY</span><strong>—</strong><small>Consulta el informe de Associates</small></article><article><span>IMPORTADOS HOY</span><strong>{status.importedToday}</strong><small>Borradores creados en Shopify</small></article><article><span>EN CATÁLOGO</span><strong>{status.totalProducts}</strong><small>Productos OMNI vinculados</small></article><article><span>ACTUALIZACIÓN</span><strong>60<small> min</small></strong><small>Cron horario en Vercel Pro</small></article></div>
-      <div className={styles.workgrid}>
-        <section className={styles.panel}><div className={styles.panelHead}><div><span>01 / CATÁLOGO</span><h2>Importar productos ganadores</h2></div><b>↗</b></div><p>Busca productos destacados en seis categorías de Amazon.fr, redacta sus fichas originales en francés y los crea como borradores de Shopify.</p><label className={styles.field}>AMAZON AFFILIATE ID<input value={affiliateId} onChange={(event) => saveId(event.target.value)} placeholder="p. ej. mi-tienda-21" autoComplete="off" /></label><button className={styles.import} type="button" onClick={() => void importProducts()} disabled={loading || !affiliateId.trim() || !status.connected}>{loading ? <><i className={styles.spinner} /> CONSULTANDO AMAZON + OPENAI</> : "IMPORTAR 20 PRODUCTOS GANADORES AHORA"}<span>↗</span></button><small className={styles.hint}>El ID se guarda en este navegador. Nunca se envía a Shopify ni se usa como secreto.</small></section>
-        <section className={`${styles.panel} ${styles.solo}`}><div className={styles.panelHead}><div><span>02 / AUTOPILOTO</span><h2>VENDER SOLO</h2></div><div className={`${styles.switch} ${status.enabled ? styles.switchOn : ""}`}><i /></div></div><p>Activa las actualizaciones automáticas de precio y disponibilidad de los productos enlazados. Amazon procesa el pedido y el envío.</p><ul><li><span>↻</span> Precio y stock cada 60 minutos</li><li><span>↗</span> Compra dirigida a Amazon.fr</li><li><span>✓</span> Sin inventario local en Shopify</li></ul><button className={status.enabled ? styles.stop : styles.enable} onClick={() => void toggleAutopilot()} disabled={toggling || !status.connected}>{toggling ? "GUARDANDO…" : status.enabled ? "PAUSAR PILOTO" : "ACTIVAR VENDER SOLO"}</button></section>
-      </div>
-      {message && <div className={styles.notice}>{message}</div>}{error && <div className={styles.error}>{error}</div>}
-      {!status.connected && <section className={styles.setup}><div><span className={styles.eyebrow}>ANTES DE ACTIVAR</span><h2>Conecta las claves del servidor</h2><p>Solo necesitas introducir el Affiliate ID en la app. Las credenciales API se configuran como variables de entorno privadas en Vercel/local:</p></div><pre>{`AMAZON_CREATOR_API_CLIENT_ID=\nAMAZON_CREATOR_API_CLIENT_SECRET=\nAMAZON_PARTNER_TAG=\nSHOPIFY_STORE_DOMAIN=tu-tienda.myshopify.com\nSHOPIFY_ADMIN_ACCESS_TOKEN=\nOPENAI_API_KEY=\nCRON_SECRET=`}</pre><small>Amazon Creators API requiere aceptación en Associates y acceso API aprobado. Shopify necesita scopes read_products, write_products y write_shop. No se usa contenido de ejemplo.</small></section>}
-      <footer className={styles.footer}>En tant que Partenaire Amazon, je réalise un bénéfice sur les achats remplissant les conditions requises. Les prix et la disponibilité peuvent changer. <span>OMNI AUTO STORE · ANNECY · FR</span></footer>
-    </section>
+export default async function ProductGuidePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const guide = SEO_GUIDES.find((item) => item.slug === slug);
+  if (!guide) notFound();
+  const productUrl = guideAmazonUrl(guide);
+  const faq = [
+    { q: `¿Para quién puede encajar ${guide.title.split(":")[0]}?`, a: `Puede ser una opción para quien busca ${guide.category.toLowerCase()} y ha comprobado que las dimensiones, el mantenimiento y las funciones del modelo disponible se ajustan a su hogar. La decisión depende del uso real, no solo del nombre de la gama.` },
+    { q: "¿El precio de esta guía es el precio actual?", a: "No publicamos un precio fijo porque los importes, promociones, vendedores y disponibilidad de Amazon cambian. El enlace abre la búsqueda o la ficha para que consultes las condiciones vigentes antes de comprar." },
+    { q: "¿Cómo verifico qué incluye la oferta?", a: "Abre la ficha de Amazon y comprueba el nombre exacto del modelo, número de modelo, accesorios, vendedor, garantía, devolución y entrega. Las variantes pueden compartir imágenes y diferir en contenido." },
+    { q: "¿La recomendación sustituye a comparar otros modelos?", a: "No. Usa esta guía como lista de comprobación y compara al menos dos alternativas de la misma categoría, teniendo en cuenta el coste inicial y el mantenimiento." },
+  ];
+  const schema = {
+    "@context": "https://schema.org", "@type": "Product", name: guide.title, brand: { "@type": "Brand", name: guide.brand }, category: guide.category,
+    description: guide.summary, url: `https://omni-final-one.vercel.app/productos/${guide.slug}`,
+  };
+  const paragraphs = [
+    `La mejor elección empieza por una pregunta sencilla: qué tarea quieres resolver y con qué frecuencia. En la categoría ${guide.category.toLowerCase()}, dos productos con aspecto parecido pueden diferir en tamaño, consumibles, controles, servicio y comodidad. Antes de fijarte en una promoción, anota las condiciones de tu casa y el uso habitual. Esta guía ordena esa evaluación para ${guide.title.split(":")[0]}.`,
+    `La descripción de una ficha comercial no siempre permite saber si un aparato será cómodo en tu rutina. Conviene relacionar cada función con una tarea concreta: qué prepararás o limpiarás, cuántas personas lo usarán, dónde lo guardarás y cuánto tiempo quieres dedicar a mantenerlo. Si una prestación no resuelve una necesidad real, quizá no merezca pagar más por ella.`,
+    `Las especificaciones sirven para descartar opciones incompatibles, pero no describen por completo la experiencia cotidiana. Compara medidas, capacidad útil, controles, accesorios y mantenimiento del modelo exacto. Cuando una tienda reúne varias versiones bajo una misma familia, revisa el número de modelo y no te guíes únicamente por el título o la fotografía.`,
+    `También importa el coste total. Además del precio de compra, considera filtros, bolsas, detergentes compatibles, accesorios, energía, limpieza y posibles recambios. No todos esos costes aplican a todos los aparatos; consulta el manual y la ficha del modelo que estés evaluando. Una opción económica puede resultar menos conveniente si depende de consumibles difíciles de encontrar.`,
+    `Piensa en el espacio disponible antes de pedirlo. Mide la zona de uso y de almacenamiento, deja margen para ventilación y acceso, y comprueba cómo se guardan cables y accesorios. Si el dispositivo se desplaza o se limpia con frecuencia, el peso y el desmontaje pueden influir más que una función llamativa.`,
+    `La durabilidad depende del uso, el cuidado, las piezas disponibles y las condiciones de garantía. Busca instrucciones de mantenimiento comprensibles, confirma cómo se limpian las partes en contacto con alimentos o polvo y comprueba si se venden consumibles originales o compatibles. Revisa además las políticas actuales de devolución y quién vende y envía el artículo.`,
+    `La experiencia de otras personas puede aportar pistas sobre problemas prácticos, aunque las valoraciones cambian y no garantizan el resultado en tu hogar. Lee opiniones recientes de la misma variante y busca comentarios concretos sobre los aspectos que te importan. Distingue una experiencia individual de una característica confirmada por el fabricante.`,
+    `En resumen, ${guide.title.split(":")[0]} merece consideración si sus funciones confirmadas encajan con una necesidad concreta, si cabe en tu espacio y si el mantenimiento es asumible. Si esos puntos no están claros, compara alternativas antes de decidir. Este contenido es una guía de compra general; no es una prueba de laboratorio ni una afirmación de experiencia personal con el producto.`,
+  ];
+  return <main className="guide-shell">
+    <Link className="guide-back" href="/">← PASSERELLE · Selección de hogar</Link>
+    <article>
+      <p className="guide-eyebrow">GUÍA DE COMPRA · {guide.category.toUpperCase()}</p>
+      <h1>{guide.title}</h1>
+      <p className="guide-lead">{guide.summary}</p>
+      <p className="guide-disclosure">{disclosure}</p>
+      <TrackedAmazonLink className="guide-cta" href={productUrl} productId={guide.slug}>Ver disponibilidad en Amazon →</TrackedAmazonLink>
+      <h2>Resumen: qué conviene saber</h2>
+      <p>{guide.summary} No asumimos un precio, stock o puntuación fija: esos datos cambian y deben consultarse en la ficha enlazada. Los detalles técnicos descritos en esta página son criterios de comparación; confirma cada prestación en el modelo exacto.</p>
+      <h2>¿Para quién puede ser una buena opción?</h2>
+      <ul>{guide.fit.map((point) => <li key={point}>{point}</li>)}</ul>
+      <h2>Aspectos que conviene comprobar antes de comprar</h2>
+      <ul>{guide.considerations.map((point) => <li key={point}>{point}</li>)}</ul>
+      <h2>Cómo comparar la ficha del producto</h2>
+      {paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+      <h2>Lista práctica de comprobación</h2>
+      <ol>
+        <li>Define el uso más frecuente y el resultado que esperas obtener.</li>
+        <li>Comprueba el nombre y número de modelo exactos, junto con sus dimensiones.</li>
+        <li>Valida las funciones y accesorios en la ficha del vendedor, no solo en una imagen.</li>
+        <li>Calcula consumibles, recambios y mantenimiento junto al precio inicial.</li>
+        <li>Lee condiciones de entrega, devolución, garantía y vendedor antes de pagar.</li>
+        <li>Compara alternativas y conserva la opción que mejor resuelva tu necesidad.</li>
+      </ol>
+      <h2>Preguntas frecuentes</h2>
+      {faq.map(({ q, a }) => <section className="guide-faq" key={q}><h3>{q}</h3><p>{a}</p></section>)}
+      <p className="guide-updated">Guía editorial de Passerelle. No contiene precios ni valoraciones inventados. Las características y condiciones comerciales deben confirmarse en Amazon.</p>
+      <TrackedAmazonLink className="guide-cta" href={productUrl} productId={guide.slug}>Consultar en Amazon →</TrackedAmazonLink>
+    </article>
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, "\\u003c") }} />
   </main>;
 }

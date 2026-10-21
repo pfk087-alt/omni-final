@@ -1,7 +1,8 @@
 import OpenAI from "openai";
+import { AMAZON_AFFILIATE_TAG, cleanAmazonLink } from "@/lib/cleanAmazonLink";
 
 export const SHOPIFY_API_VERSION = "2026-07";
-export const AMAZON_MARKETPLACE = process.env.AMAZON_MARKETPLACE?.trim() || "www.amazon.es";
+export const AMAZON_MARKETPLACE = "www.amazon.es";
 
 export type AmazonItem = {
   asin: string;
@@ -63,8 +64,7 @@ function amazonRecord(item: any, partnerTag: string): AmazonItem | null {
   if (!item?.asin) return null;
   const listing = item.offersV2?.listings?.[0];
   const price = listing?.price?.money;
-  const url = new URL(item.detailPageURL || `https://www.amazon.fr/dp/${item.asin}`);
-  url.searchParams.set("tag", partnerTag);
+  const url = cleanAmazonLink(item.detailPageURL || `https://www.amazon.es/dp/${item.asin}`);
   const rankValues = item.browseNodeInfo?.websiteSalesRank?.salesRank
     ?? item.browseNodeInfo?.websiteSalesRank?.value;
   const rank = Number(rankValues);
@@ -92,12 +92,13 @@ function amazonRecord(item: any, partnerTag: string): AmazonItem | null {
     rating: rating ?? null,
     availability: String(listing?.availability?.type || listing?.availability?.message || "INCONNUE"),
     rank: Number.isFinite(rank) && rank > 0 ? rank : null,
-    affiliateUrl: url.toString(),
+    affiliateUrl: url,
   };
 }
 
 export async function searchAmazonBestSellers(partnerTag: string, target = 20, searchTerms?: string[]): Promise<AmazonItem[]> {
-  if (!/^[a-zA-Z0-9_-]{2,64}$/.test(partnerTag)) throw new Error("El Affiliate ID no tiene un formato válido.");
+  void partnerTag;
+  partnerTag = AMAZON_AFFILIATE_TAG;
   const accessToken = await creatorsAccessToken();
   const keywords = searchTerms?.length ? searchTerms : ["randonnée", "cuisine", "maison", "jardin", "sport", "animaux"];
   const collected = new Map<string, AmazonItem>();
@@ -147,12 +148,13 @@ export async function rewriteInFrench(items: AmazonItem[]) {
     const rewritten = byAsin.get(item.asin);
     if (!rewritten?.title || !rewritten.summary) throw new Error(`OpenAI no devolvió contenido válido para ${item.asin}.`);
     const bullets = Array.isArray(rewritten.features) ? rewritten.features.slice(0, 3).map((feature) => `<li>${escapeHtml(String(feature).slice(0, 240))}</li>`).join("") : "";
-    const descriptionHtml = `<p>${escapeHtml(rewritten.summary.slice(0, 700))}</p>${bullets ? `<ul>${bullets}</ul>` : ""}<p>Le prix et la disponibilité peuvent changer. Vérifiez les informations à jour sur Amazon.fr.</p><p><a href="${escapeHtml(item.affiliateUrl)}" rel="nofollow sponsored">Voir l’offre sur Amazon.fr</a></p><small>En tant que Partenaire Amazon, je réalise un bénéfice sur les achats remplissant les conditions requises.</small>`;
+    const descriptionHtml = `<p>${escapeHtml(rewritten.summary.slice(0, 700))}</p>${bullets ? `<ul>${bullets}</ul>` : ""}<p>Le prix et la disponibilité peuvent changer. Vérifiez les informations à jour sur Amazon.es.</p><p><a href="${escapeHtml(item.affiliateUrl)}" rel="nofollow sponsored">Voir l’offre sur Amazon.es</a></p><small>En tant que Partenaire Amazon, je réalise un bénéfice sur les achats remplissant les conditions requises.</small>`;
     return { ...item, seoTitle: rewritten.title.slice(0, 255), descriptionHtml };
   });
 }
 
 export async function setShopAutopilot(enabled: boolean, affiliateId?: string) {
+  const fixedTag = AMAZON_AFFILIATE_TAG;
   const query = `query AutoStoreSettingsProduct { products(first: 1, query: "tag:omni-auto-store", sortKey: CREATED_AT) { nodes { id } } }`;
   const data = await shopify<{ products: { nodes: { id: string }[] } }>(query);
   const ownerId = data.products.nodes[0]?.id;
@@ -161,7 +163,7 @@ export async function setShopAutopilot(enabled: boolean, affiliateId?: string) {
     `mutation SetAutoStore($metafields: [MetafieldsSetInput!]!) { metafieldsSet(metafields: $metafields) { userErrors { message } } }`,
     { metafields: [
       { ownerId, namespace: "omni_auto_store", key: "enabled", type: "boolean", value: String(enabled) },
-      ...(affiliateId ? [{ ownerId, namespace: "omni_auto_store", key: "affiliate_id", type: "single_line_text_field", value: affiliateId }] : []),
+      { ownerId, namespace: "omni_auto_store", key: "affiliate_id", type: "single_line_text_field", value: fixedTag },
     ] },
   );
   if (result.metafieldsSet.userErrors.length) throw new Error(result.metafieldsSet.userErrors[0].message);
@@ -169,6 +171,7 @@ export async function setShopAutopilot(enabled: boolean, affiliateId?: string) {
 }
 
 export async function saveShopAffiliateId(affiliateId: string) {
+  affiliateId = AMAZON_AFFILIATE_TAG;
   const query = `query AutoStoreSettingsProduct { products(first: 1, query: "tag:omni-auto-store", sortKey: CREATED_AT) { nodes { id } } }`;
   const data = await shopify<{ products: { nodes: { id: string }[] } }>(query);
   const ownerId = data.products.nodes[0]?.id;

@@ -56,7 +56,7 @@ export async function buscarProductosConMejorComision(affiliateId: string) {
     max_output_tokens: 2500,
     tools: [{ type: "web_search", search_context_size: "medium" }],
     input: [
-      { role: "system", content: "Eres responsable de catálogo afiliado en Francia. Consulta la tabla oficial actual de comisiones de Amazon.fr Associates, no uses tasas de otros países. Analiza únicamente los productos proporcionados. Devuelve JSON válido: {products:[{asin,category,commissionRate,estimatedCommission,reason}]}. commissionRate es porcentaje numérico solo si una fuente oficial lo acredita para la categoría exacta; estimatedCommission es precio × tasa y, si no puede verificarse, null. No inventes tasas. Ordena por comisión estimada descendente; los null al final. Añade la URL oficial consultada en reason." },
+      { role: "system", content: "Eres responsable del catálogo afiliado de Amazon.es. Consulta únicamente la tabla oficial actual de comisiones de Amazon.es Associates; no uses tasas de otros países. Analiza solo los productos proporcionados. Devuelve JSON válido: {products:[{asin,category,commissionRate,estimatedCommission,reason}]}. commissionRate es un porcentaje solo si una fuente oficial lo acredita para esa categoría; estimatedCommission es precio × tasa y, si no se verifica, null. No inventes tasas. Ordena comisión estimada descendente, null al final. Añade la URL oficial consultada en reason." },
       { role: "user", content: JSON.stringify(items.map(({ asin, title, price, currency, rank, affiliateUrl }) => ({ asin, title, price, currency, rank, affiliateUrl }))) },
     ],
   });
@@ -70,5 +70,5 @@ export async function buscarProductosConMejorComision(affiliateId: string) {
     const estimate = rate === null || item.price === null ? null : Math.round(item.price * rate / 100 * 100) / 100;
     return { ...item, category: result?.category || "Categoría pendiente de verificar", commissionRate: rate, estimatedCommission: estimate, commissionNote: result?.reason || "Amazon no ofrece una tasa verificable para este producto." };
   }).sort((a, b) => (b.estimatedCommission ?? -1) - (a.estimatedCommission ?? -1));
-  return { products, source: "Amazon Creators API y tabla oficial de comisiones de Amazon.fr", note: "Las comisiones reales dependen de la categoría y de las compras atribuidas; revisa Associates Central." };
+  return { products, source: "Amazon Creators API y tabla oficial de comisiones de Amazon.es", note: "Las comisiones reales dependen de la categoría y de las compras atribuidas; revisa Associates Central." };
 }

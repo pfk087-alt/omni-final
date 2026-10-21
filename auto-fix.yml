@@ -1,0 +1,49 @@
+name: OMNI affiliate link guard
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: omni-affiliate-link-guard
+  cancel-in-progress: true
+
+jobs:
+  verify-and-repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Canonicalizar enlaces guardados
+        run: node scripts/clean-amazon-data.mjs
+      - name: Registrar cambio seguro
+        run: |
+          if ! git diff --quiet -- data/social-queue.json data/affiliate-products.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/social-queue.json data/affiliate-products.json
+            git commit -m "fix: normalize affiliate links"
+            git push origin main
+          else
+            echo "No hay cambios que subir."
+          fi
+      - name: Verificar enlaces y ventas reportadas en producción
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET no está en los secretos del repositorio; se omite el chequeo remoto."
+            exit 0
+          fi
+          curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            https://omni-final-one.vercel.app/api/cron/verificar-facturacion
